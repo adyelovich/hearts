@@ -1,0 +1,20 @@
+alex@alex-ubuntu:~/code/cards$ ./test 14 4 13
+Random number: 12
+Random number: 46
+Random number: 44
+Random number: 49
+Random number: 9
+Random number: 3
+Random number: 23
+Random number: 12
+Random number: 37
+Random number: 40
+Random number: 39
+Random number: 20
+Player 0 hand:
+Card: 5 of spades state: IN_HAND
+Card: 4 of hearts state: IN_HAND
+Card: QUEEN of spades state: IN_HAND
+Segmentation fault (core dumped)
+alex@alex-ubuntu:~/code/cards$ 
+
