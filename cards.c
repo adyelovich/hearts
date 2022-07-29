@@ -9,9 +9,6 @@ static int insert_sorted(Player *player, Card *to_insert);
 static Card *remove_from_hand(Player *player, int cardno);
 static unsigned int deal_card(Player *player, Deck *deck, int decksize);
 
-/*
-static unsigned int deal_card(Player *player, Card *deck, int decksize);
-*/
 /**
  * Generates a "standard" deck of cards, where is standard is considered to
  * be a type of deck where one of each suit of a card exists. This function
@@ -45,27 +42,6 @@ int gensd(Deck *deck, Value start, Value end, int n) {
 
     return k;
 }
-
-#if 0
-int gensd(Card *deck, Value start, Value end, int n) {
-    int k;
-    Value i;
-    Suit j;
-    Card *p;
-
-    p = deck;
-    for (k = 0; k < n; k++)
-        for (i = start; i <= end; i++)
-            for (j = SPADES; j <= DIAMONDS; j++) {
-                p->value = i;
-                p->suit = j;
-                p->state = IN_DECK;
-                p++;
-            }
-
-    return k;
-}
-#endif
 
 /**
  * Generates an array of players which simulates the table of players. It will
@@ -108,36 +84,6 @@ int dealdeck(Player *players, Deck *deck, int n, int numplayers, int decksize) {
 
     return i;
 }
-
-#if 0
-int dealdeck(Player *players, Card *deck, int n, int numplayers, int decksize) {
-    int i;
-    unsigned int ri;
-
-    srand(time(NULL));
-    ri = rand() % decksize;
-    n *= 4;
-  
-    for (i = 0; n-- > 0 && i < decksize; i++) {
-        /* Find a card at random that has not been dealt yet */
-        printf("Num before check: %u\n", ri);
-        while ((deck + ri)->state != IN_DECK) {
-            printf("Random number: %u\n", ri);
-            ri = rand() % decksize; /* Get a new random number */
-        }
-
-        /* The next player gets that card in the next empty spot in their hand */
-        printf("Dealing card at %u\n", ri);
-        insert_sorted(players, deck + ri, i % numplayers);
-        deck[ri].state = IN_HAND; /* Card is now in hand */
-    }
-    
-    return i;
-}
-#endif
-
-
-    
 
 /**
    This function prints a player's hand in the format
@@ -192,37 +138,6 @@ Card *play_card(Player *player, valid_play_function is_valid) {
 
     return played;
 }
-
-#if 0
-/**
-   THIS IS THE OLD FUNCTION
-   Simulates playing a card from a player's hand. The player whose
-   turn it is is prompted with choosing a number, and then the
-   corresponding card in their hand is removed from their hand, the
-   card enters the IN_PLAY state, and the memory address of that
-   selected card is returned so that the caller knows what card was
-   selected.
- */
-Card *play_card(Player *player) {
-    int num;
-    Card *played;
-    
-    do {
-        printf("Choose a card to play: ");
-        scanf("%d", &num);
-        
-        if (num < 1 || num > player->num_cards)
-            printf("Invalid entry: choose a number 1 - %d\n",
-                   player->num_cards);
-    } while (num < 1 || num > player->num_cards);
-
-    player->hand[num - 1]->state = IN_PLAY;
-    played = remove_from_hand(player, num - 1);
-
-    return played;
-}
-
-#endif
 
 int inc_card_suit(Player *player, Suit suit) {
     int ret;
@@ -314,9 +229,7 @@ int num_of_suit(Player *player, Suit suit) {
     return ret;
 }
 
-#if 0
-Card *get_card_addr(Card *cards, Value val, Suit suit, int n)
-#endif
+/********** START PRIVATE FUNCTIONS *************/
 
 /*This is the new one*/
 static int insert_sorted(Player *player, Card *to_insert) {
@@ -375,23 +288,7 @@ static unsigned int deal_card(Player *player, Deck *deck, int decksize) {
     return ri;
 }
 
-
-#if 0
-static unsigned int deal_card(Player *player, Card *deck, int decksize) {
-    unsigned int ri;
-
-    do {
-        ri = rand() % decksize;
-    } while (deck[ri].state != IN_DECK);
-
-    insert_sorted(player, deck + ri);
-    inc_card_suit(player, deck[ri].suit);
-    deck[ri].state = IN_HAND;
-
-    return ri;
-}
-#endif
-
+/**************** START DEBUG FUNCTIONS ****************/
 
 /**
  * Used for debugging, currently prints the contents of card to stdout.

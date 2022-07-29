@@ -25,5 +25,6 @@ typedef enum {
 
 int start_hearts(void);
 int play_trick(Player *players, int startno);
+int compare_cards(Card *first, Card *second, Suit lead);
 
 #endif /* _HEARTS_H */

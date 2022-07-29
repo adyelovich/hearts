@@ -37,7 +37,8 @@ int main(void) {
 int start_hearts(void) {
     Card *deck;
     Player *players;
-
+    
+    
     deck = malloc(NUM_CARDS_IN_DECK * sizeof(Card));
     players = malloc(NUM_PLAYERS * sizeof(Player));
 
@@ -61,7 +62,18 @@ int start_hearts(void) {
     return 1;
 }
 
+int play_round(Player *players, Deck *deck) {
+    static int round_num = 1;
+    /*Deal deck of cards*/
+    /*Play a trick*/
+        
+}
+
+
+
 int start_round(Player *players, Card *deck) {
+    static int round_num = 0;
+    
     dealdeck(players, deck, NUM_START_IN_HAND, NUM_PLAYERS, NUM_CARDS_IN_DECK);
 
     game.first_trick = 0;
@@ -69,16 +81,16 @@ int start_round(Player *players, Card *deck) {
     game.is_lead = 1;
     game.error = ERR_NONE;
 
-    play_trick(players, find_player_with_card
+    play_trick(players, find_player_with_card);
 }
 
 int play_trick(Player *players, int startno) {
-    int i;
-    Card *trick[NUM_PLAYERS];
+    int i, winning_index = startno;
+    Card *winning_card, *trick[NUM_PLAYERS];
     
     for (i = 0; i < NUM_PLAYERS; i++) {
         trick[i] = play_card(&players[(i + startno) % NUM_PLAYERS], hearts_valid_play);
-
+        
         if (!i) {
             game.is_lead = 0;
             game.led_suit = trick[i]->suit;
@@ -86,11 +98,21 @@ int play_trick(Player *players, int startno) {
 
         if (!game.hearts_broken && trick[i]->suit == HEARTS)
             game.hearts_broken = 1;
+
+        winning_index = compare_cards(trick[i], trick[winning_index], game.led_suit) > 0
+            ? i : winning_index;
     }
+
+    for (i = 0; i < NUM_PLAYERS; i++) {
+        
+    }
+        
 
     return 1;
 }
 
+
+    
 static int hearts_valid_play(Player *player, Card *card) {
     int valid;
 

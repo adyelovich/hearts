@@ -1,0 +1,6 @@
+What needs to be done in the upcoming:
+
+Clean up the valid hearts play logic
+      Maybe use functions
+
+Implement hearts turn logic so that a game can actually be played
