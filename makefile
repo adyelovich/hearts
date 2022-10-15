@@ -18,11 +18,19 @@ hearts.o: hearts.c include/cards.h include/hearts.h
 main.o: main.c include/cards.h
 	$(CC) $(CFLAGS) -c main.c
 
-debug: debug/main.o debug/cards.o
+debug: debug/debug debug/hearts
+
+debug/debug: debug/main.o debug/cards.o
 	$(CC) debug/main.o debug/cards.o -o debug/debug $(LDFLAGS)
+
+debug/hearts: debug/cards.o debug/hearts.o
+	$(CC) debug/cards.o debug/hearts.o -o debug/hearts $(LDFLAGS)
 
 debug/main.o: main.c include/cards.h
 	$(CC) $(CFLAGS) -c -g main.c -o debug/main.o
 
 debug/cards.o: cards.o include/cards.h
 	$(CC) $(CFLAGS) -c -g cards.c -o debug/cards.o
+
+debug/hearts.o: hearts.c include/cards.h include/hearts.h
+	$(CC) $(CFLAGS) -c -g hearts.c -o debug/hearts.o

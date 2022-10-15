@@ -20,12 +20,17 @@
 
 static int hearts_valid_play(Player *player, Card *card);
 static void print_err(void);
+static int compare_values(Card *first, Card *second);
+
 
 static struct {
     short hearts_broken;
     short first_trick;
     short is_lead;
+    short round_num;
     Suit led_suit;
+    const Card *two_clubs;
+    const Card *queen_spades;
     Hearts_Error error;
 } game;
 
@@ -35,9 +40,8 @@ int main(void) {
 }
 
 int start_hearts(void) {
-    Card *deck;
+    Deck *deck;
     Player *players;
-    
     
     deck = malloc(NUM_CARDS_IN_DECK * sizeof(Card));
     players = malloc(NUM_PLAYERS * sizeof(Player));
@@ -48,47 +52,60 @@ int start_hearts(void) {
     }
 
     gensd(deck, SMALLEST_VAL, LARGEST_VAL, 1);
-    gentable(players, NUM_PLAYERS, NUM_START_IN_HAND);
 
-    dealdeck(players, deck, NUM_START_IN_HAND, NUM_PLAYERS, NUM_CARDS_IN_DECK);
+    /* -2 because one for the general offset back to 0-index, and
+       another due to the fact that we start with TWO instead of ACE_LOW */
+    game.two_clubs = &deck->cards[13 * CLUBS + TWO - 2];
+    game.queen_spades = &deck->cards[13 * SPADES + QUEEN - 2];
+
+    gentable(players, NUM_PLAYERS, NUM_START_IN_HAND);
 
     game.first_trick = 0;
     game.hearts_broken = 0;
     game.is_lead = 0;
     game.error = ERR_NONE;
-    
-    
 
+    play_round(players, deck);
+        
     return 1;
 }
 
 int play_round(Player *players, Deck *deck) {
-    static int round_num = 1;
-    /*Deal deck of cards*/
-    /*Play a trick*/
-        
-}
+    int rounds_left = NUM_START_IN_HAND;
+    int player_start_num;
+    Player *player_start;
 
-
-
-int start_round(Player *players, Card *deck) {
-    static int round_num = 0;
-    
-    dealdeck(players, deck, NUM_START_IN_HAND, NUM_PLAYERS, NUM_CARDS_IN_DECK);
-
-    game.first_trick = 0;
-    game.hearts_broken = 0;
+    /*set the game state*/
+    game.first_trick = 1;
     game.is_lead = 1;
-    game.error = ERR_NONE;
+    
+    /*Deal deck of cards*/
+    dealdeck(players, deck, NUM_START_IN_HAND, NUM_PLAYERS, NUM_CARDS_IN_DECK);
+    
+    /*Play a trick*/
+    game.round_num++;
+    
+    player_start_num = find_player_with_card(players, game.two_clubs, 4)->num;
 
-    play_trick(players, find_player_with_card);
+    printf("Can I lead? %s\n", game.is_lead ? "yes" : "no");
+    printf("%d\n", play_trick(players, player_start_num));
+
+    return 0;
+    #if 0
+    while (rounds_left--) {
+        player_start_num = play_trick(players, player_start_num);
+    }
+    #endif
 }
 
 int play_trick(Player *players, int startno) {
     int i, winning_index = startno;
     Card *winning_card, *trick[NUM_PLAYERS];
-    
+
+    puts("starting up play trick");
     for (i = 0; i < NUM_PLAYERS; i++) {
+        
+        print_hand(&players[(i + startno) % NUM_PLAYERS]);
         trick[i] = play_card(&players[(i + startno) % NUM_PLAYERS], hearts_valid_play);
         
         if (!i) {
@@ -99,18 +116,50 @@ int play_trick(Player *players, int startno) {
         if (!game.hearts_broken && trick[i]->suit == HEARTS)
             game.hearts_broken = 1;
 
-        winning_index = compare_cards(trick[i], trick[winning_index], game.led_suit) > 0
+        winning_index = compare_cards(trick[i], trick[winning_index]) > 0
             ? i : winning_index;
     }
 
+    /* collect the trick */
     for (i = 0; i < NUM_PLAYERS; i++) {
-        
-    }
-        
+        if (trick[i]->suit == HEARTS)
+            players[winning_index].score++;
+        else if (trick[i]->suit == SPADES && trick[i]->value == QUEEN)
+            players[winning_index].score += 13;
 
-    return 1;
+        trick[i]->state = IN_DISCARD;
+    }
+
+    return winning_index;
 }
 
+int compare_cards(Card *first, Card *second) {
+    int ret;
+
+    /* if there is no led suit or both cards are in the leading suit */
+    if (!game.led_suit || (first->suit == game.led_suit && second->suit == game.led_suit)) {
+        if (first->suit == game.led_suit)
+            ret = 1;
+        else if (second->suit == game.led_suit)
+            ret = -1;
+        else /* neither card is the led suit */
+            ret = 0;
+    } else { /*compare by value*/
+        ret = compare_values(first, second);
+    }
+
+    return ret;
+}
+
+static int compare_values(Card *first, Card *second) {
+    if (first->value > second->value)
+        return 1;
+    else if (first->value == second->value)
+        return 0;
+    else
+        return -1;
+}
+    
 
     
 static int hearts_valid_play(Player *player, Card *card) {

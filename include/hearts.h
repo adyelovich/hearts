@@ -11,7 +11,7 @@
 #define NUM_START_IN_HAND 13
 #define NUM_PLAYERS 4
 
-#define SMALLEST_VAL 2
+#define SMALLEST_VAL TWO
 #define LARGEST_VAL ACE_HIGH
 
 typedef enum {
@@ -24,7 +24,8 @@ typedef enum {
 } Hearts_Error;
 
 int start_hearts(void);
+int play_round(Player *players, Deck *deck);
 int play_trick(Player *players, int startno);
-int compare_cards(Card *first, Card *second, Suit lead);
+int compare_cards(Card *first, Card *second);
 
 #endif /* _HEARTS_H */

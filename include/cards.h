@@ -122,7 +122,7 @@ int dec_card_suit(Player *player, Suit suit);
 /**
    Print a card, either in debug or abbreviated format.
  */
-void printcard(Card *card, unsigned int option);
+void printcard(const Card *card, unsigned int option);
 
 /**
    Print the number of cards in suit player has.
@@ -133,6 +133,6 @@ int num_of_suit(Player *player, Suit suit);
    Finds the player in players that has card in their hand.
    If the card is not found then NULL is returned.
  */
-Player *find_player_with_card(Player *players, Card *card, int numplayers);
+Player *find_player_with_card(Player *players, const Card *card, int numplayers);
 
 #endif /* _CARDS_H */

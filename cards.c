@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+
 #include "cards.h"
 
 #define IN_RANGE(check, max) ((check) >= 1 && (check) <= (max))
@@ -16,6 +17,7 @@ static unsigned int deal_card(Player *player, Deck *deck, int decksize);
  * (inclusive), and then returns the number of cards created.
  */
 
+#if 0
 int gensd(Deck *deck, Value start, Value end, int n) {
     int k;
     Value i;
@@ -42,6 +44,36 @@ int gensd(Deck *deck, Value start, Value end, int n) {
 
     return k;
 }
+#endif
+
+int gensd(Deck *deck, Value start, Value end, int n) {
+    int k;
+    Value i;
+    Suit j;
+    Card *p;
+
+    deck->smallest_val = start;
+    deck->biggest_val = end;
+    deck->num_cards = (end - start + 1) * 4 * n;
+    deck->cards = malloc(deck->num_cards * sizeof(*deck->cards));
+
+    if (deck->cards == NULL)
+        return -1;
+
+    p = deck->cards;
+
+    for (k = 0; k < n; k++)
+        for (i = SPADES; i <= DIAMONDS; i++)
+            for (j = start; j <= end; j++) {
+                p->value = j;
+                p->suit = i;
+                p->state = IN_DECK;
+                p++;
+            }
+
+    return k;
+}
+
 
 /**
  * Generates an array of players which simulates the table of players. It will
@@ -187,22 +219,29 @@ int dec_card_suit(Player *player, Suit suit) {
     return ret;
 }
 
-Player *find_player_with_card(Player *players, Card *card, int numplayers) {
+/* The issue here is that the searching stops prematurely and thinks
+   that something like a 4C is actually a 2C, so it stops early. Fix this
+   by implementing some sort of check to see if the suit and value match up.*/
+
+Player *find_player_with_card(Player *players, const Card *card, int numplayers) {
     int i, j, found;
 
-    for (i = found = 0; i < numplayers && !found; i++) {
-        for (j = 0; j < players[i].num_cards
-                    && players[i].hand[j]->suit < card->suit; j++)
+    /* iterate over all the players */
+    found = 0;
+    for (i = 0; i < numplayers && !found; i++) {
+        /* stop once we hit the target suit */
+        for (j = 0; j < players[i].num_cards && players[i].hand[j]->suit < card->suit; j++)
             ;
 
-        for ( ; j < players[i].num_cards
-                && players[i].hand[j]->value < card->value; j++)
+        /* stop once we hit the target value */
+        for ( ; j < players[i].num_cards && players[i].hand[j]->value < card->value; j++)
             ;
 
-        found = j != players[i].num_cards;
+        found = card->suit == players[i].hand[j]->suit && card->value == players[i].hand[j]->value;
     }
 
-    return i == numplayers ? NULL : &players[i];
+    printf("%d\n", found);
+    return found ? players + i - 1 : NULL;
 }
 
 int num_of_suit(Player *player, Suit suit) {
@@ -293,7 +332,7 @@ static unsigned int deal_card(Player *player, Deck *deck, int decksize) {
 /**
  * Used for debugging, currently prints the contents of card to stdout.
  */
-void printcard(Card *card, unsigned int option) {
+void printcard(const Card *card, unsigned int option) {
     unsigned char print_type;
 
     print_type = option & PRINT_DEBUG;
