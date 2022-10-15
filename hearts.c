@@ -22,7 +22,6 @@ static int hearts_valid_play(Player *player, Card *card);
 static void print_err(void);
 static int compare_values(Card *first, Card *second);
 
-
 static struct {
     short hearts_broken;
     short first_trick;
@@ -70,14 +69,21 @@ int start_hearts(void) {
     return 1;
 }
 
+/* think of this like playing one deal */
 int play_round(Player *players, Deck *deck) {
     int rounds_left = NUM_START_IN_HAND;
     int player_start_num;
     Player *player_start;
 
     /*set the game state*/
+    /*at the start of each round we have the following:
+      - it is the first trick
+      - the first play is that leading play for that trick
+      - hearts are not broken
+      - (for now) there is no error
+    */
     game.first_trick = 1;
-    game.is_lead = 1;
+    game.hearts_broken = 0;
     
     /*Deal deck of cards*/
     dealdeck(players, deck, NUM_START_IN_HAND, NUM_PLAYERS, NUM_CARDS_IN_DECK);
@@ -86,16 +92,16 @@ int play_round(Player *players, Deck *deck) {
     game.round_num++;
     
     player_start_num = find_player_with_card(players, game.two_clubs, 4)->num;
-
+    #if 0
     printf("Can I lead? %s\n", game.is_lead ? "yes" : "no");
     printf("%d\n", play_trick(players, player_start_num));
-
-    return 0;
-    #if 0
+    #endif
     while (rounds_left--) {
+        game.led_suit = NONE_SUIT;
+        game.is_lead = 1;
         player_start_num = play_trick(players, player_start_num);
     }
-    #endif
+    return 0;
 }
 
 int play_trick(Player *players, int startno) {
@@ -103,21 +109,23 @@ int play_trick(Player *players, int startno) {
     Card *winning_card, *trick[NUM_PLAYERS];
 
     puts("starting up play trick");
+    printf("it is player %d's lead!\n", winning_index);
     for (i = 0; i < NUM_PLAYERS; i++) {
-        
-        print_hand(&players[(i + startno) % NUM_PLAYERS]);
-        trick[i] = play_card(&players[(i + startno) % NUM_PLAYERS], hearts_valid_play);
+        int table_index = (i + startno) % NUM_PLAYERS;
+            
+        print_hand(&players[table_index]);
+        trick[table_index] = play_card(&players[table_index], hearts_valid_play);
         
         if (!i) {
             game.is_lead = 0;
-            game.led_suit = trick[i]->suit;
+            game.led_suit = trick[table_index]->suit;
         }
 
-        if (!game.hearts_broken && trick[i]->suit == HEARTS)
+        if (!game.hearts_broken && trick[table_index]->suit == HEARTS)
             game.hearts_broken = 1;
 
-        winning_index = compare_cards(trick[i], trick[winning_index]) > 0
-            ? i : winning_index;
+        winning_index = compare_cards(trick[table_index], trick[winning_index]) > 0
+            ? table_index : winning_index;
     }
 
     /* collect the trick */
@@ -130,23 +138,20 @@ int play_trick(Player *players, int startno) {
         trick[i]->state = IN_DISCARD;
     }
 
+    if (game.first_trick)
+        game.first_trick = 0;
+
+    printf("player %d won the last trick!\n", winning_index);
     return winning_index;
 }
 
 int compare_cards(Card *first, Card *second) {
     int ret;
 
-    /* if there is no led suit or both cards are in the leading suit */
-    if (!game.led_suit || (first->suit == game.led_suit && second->suit == game.led_suit)) {
-        if (first->suit == game.led_suit)
-            ret = 1;
-        else if (second->suit == game.led_suit)
-            ret = -1;
-        else /* neither card is the led suit */
-            ret = 0;
-    } else { /*compare by value*/
+    if (first->suit == second->suit)
         ret = compare_values(first, second);
-    }
+    else
+        ret = first->suit == game.led_suit ? 1 : -1;
 
     return ret;
 }
@@ -159,7 +164,6 @@ static int compare_values(Card *first, Card *second) {
     else
         return -1;
 }
-    
 
     
 static int hearts_valid_play(Player *player, Card *card) {

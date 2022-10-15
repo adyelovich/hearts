@@ -25,7 +25,8 @@ typedef enum _Suit {
     SPADES,
     HEARTS,
     CLUBS,
-    DIAMONDS
+    DIAMONDS,
+    NONE_SUIT
 } Suit;
 
 typedef enum _Card_State {
