@@ -3,6 +3,7 @@
 
 #define PRINT_ABBREV 0u
 #define PRINT_DEBUG 1u
+#define CARD_NAME_LENGTH 4
 
 typedef enum _Value {
     ACE_LOW = 1,
@@ -18,7 +19,8 @@ typedef enum _Value {
     JACK,
     QUEEN,
     KING,
-    ACE_HIGH
+    ACE_HIGH,
+    NONE_VALUE
 } Value;
 
 typedef enum _Suit {
@@ -40,6 +42,7 @@ typedef struct _Card {
     Value value;
     Suit suit;
     Card_State state;
+    char *name;
 } Card;
 
 typedef struct _Player {

@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <string.h>
 
 #include "cards.h"
 
@@ -9,6 +10,11 @@
 static int insert_sorted(Player *player, Card *to_insert);
 static Card *remove_from_hand(Player *player, int cardno);
 static unsigned int deal_card(Player *player, Deck *deck, int decksize);
+static char *card_string_abbrev(char *name, Value value, Suit suit);
+static int extract_from_card_name(const char *name, Value *value, Suit *suit);
+static Value string_to_suit(const char *s);
+static Suit string_to_value(const char *s);
+static int prompt_for_card_name(Player *player);
 
 /**
  * Generates a "standard" deck of cards, where is standard is considered to
@@ -17,34 +23,6 @@ static unsigned int deal_card(Player *player, Deck *deck, int decksize);
  * (inclusive), and then returns the number of cards created.
  */
 
-#if 0
-int gensd(Deck *deck, Value start, Value end, int n) {
-    int k;
-    Value i;
-    Suit j;
-    Card *p;
-
-    deck->smallest_val = start;
-    deck->biggest_val = end;
-    deck->num_cards = (end - start + 1) * 4 * n;
-    deck->cards = malloc(deck->num_cards * sizeof(*deck->cards));
-
-    if (deck->cards == NULL)
-        return -1;
-
-    p = deck->cards;
-    for (k = 0; k < n; k++)
-        for (i = start; i <= end; i++)
-            for (j = SPADES; j <= DIAMONDS; j++) {
-                p->value = i;
-                p->suit = j;
-                p->state = IN_DECK;
-                p++;
-            }
-
-    return k;
-}
-#endif
 
 int gensd(Deck *deck, Value start, Value end, int n) {
     int k;
@@ -68,12 +46,13 @@ int gensd(Deck *deck, Value start, Value end, int n) {
                 p->value = j;
                 p->suit = i;
                 p->state = IN_DECK;
+                p->name = malloc(4);
+                card_string_abbrev(p->name, p->value, p->suit);
                 p++;
             }
 
     return k;
 }
-
 
 /**
  * Generates an array of players which simulates the table of players. It will
@@ -153,8 +132,11 @@ Card *play_card(Player *player, valid_play_function is_valid) {
 
     while (!valid) {
         printf("Choose a card to play: ");
-        scanf("%d", &num);
+        /*scanf("%d", &num);*/
+        prompt_for_card_name(player);
 
+        printf("we have success\n");
+        return NULL;
         if ((valid = IN_RANGE(num, player->num_cards))) {
             if (is_valid != NULL)
                 valid = is_valid(player, player->hand[num - 1]);
@@ -170,6 +152,110 @@ Card *play_card(Player *player, valid_play_function is_valid) {
 
     return played;
 }
+#if 0
+int player_has_card_with_name(Player *player, const char *name) {
+    
+}
+#endif
+static int prompt_for_card_name(Player *player) {
+    char name[CARD_NAME_LENGTH], svalue[3], ssuit[2];
+    Value value;
+    Suit suit;
+    int done = 0;
+    
+    while (!done && fgets(name, CARD_NAME_LENGTH, stdin) != NULL) {
+        printf("you entered %s\n", name);
+        if (sscanf(name, " %1[0-9AJKQajkq]0%1[CDHScdhs] ", svalue, ssuit) != 2)
+            printf("Invalid card format! Use the format that matches the cards in your hand\n");
+        else
+            done = 1;
+    }
+        
+    return 0;
+}
+#if 0
+static int extract_from_card_name(const char *name, Value *value, Suit *suit) {
+    size_t len = strlen(name);
+    
+    *value = string_to_value(name);
+    *suit = string_to_suit(name + len - 1);
+}
+
+static Suit string_to_suit(const char *s) {
+    Suit suit;
+
+    switch (s[0]) {
+    case 'S':
+        suit = SPADES;
+        break;
+    case 'H':
+        suit = HEARTS;
+        break;
+    case 'C':
+        suit = CLUBS;
+        break;
+    case 'D':
+        suit = DIAMONDS;
+        break;
+    default:
+        suit = NONE_SUIT;
+        break;
+    }
+
+    return suit;
+}
+
+static Value string_to_value(const char *s) {
+    Value v;
+
+    switch (s[0]) {
+    case '2':
+        v = TWO;
+        break;
+    case '3':
+        v = THREE;
+        break;
+    case '4':
+        v = FOUR;
+        break;
+    case '5':
+        v = FIVE;
+        break;
+    case '6':
+        v = SIX;
+        break;
+    case '7':
+        v = SEVEN;
+        break;
+    case '8':
+        v = EIGHT;
+        break;
+    case '9':
+        v = NINE;
+        break;
+    case '1':
+        v = TEN;
+        break;
+    case 'J':
+        v = JACK;
+        break;
+    case 'Q':
+        v = QUEEN;
+        break;
+    case 'K':
+        v = KING;
+        break;
+    case 'A':
+        v = ACE_HIGH; /*TODO make this more versatile*/
+        break;
+    default:
+        v = NONE_VALUE;
+        break;
+    }
+
+    return v;
+}
+#endif
 
 int inc_card_suit(Player *player, Suit suit) {
     int ret;
@@ -327,16 +413,27 @@ static unsigned int deal_card(Player *player, Deck *deck, int decksize) {
     return ri;
 }
 
+ 
+ 
 /**************** START DEBUG FUNCTIONS ****************/
 
 /**
  * Used for debugging, currently prints the contents of card to stdout.
  */
 void printcard(const Card *card, unsigned int option) {
-    unsigned char print_type;
+    char name[4];
+    unsigned int print_type;
 
+    
     print_type = option & PRINT_DEBUG;
 
+    if (!print_type) {
+        card_string_abbrev(name, card->value, card->suit);
+        printf("%s", name);
+    }
+
+    #if 0
+    
     if (print_type)
         printf("Card: ");
     switch (card->value) {
@@ -415,4 +512,61 @@ void printcard(const Card *card, unsigned int option) {
 
         printf("\n");
     }
+    
+    #endif
+}
+
+static char *card_string_abbrev(char *name, Value value, Suit suit) {
+    char sval[3], *ssuit;
+
+    switch (value) {
+    case TWO:
+    case THREE:
+    case FOUR:
+    case FIVE:
+    case SIX:
+    case SEVEN:
+    case EIGHT:
+    case NINE:
+    case TEN:
+        snprintf(sval, 3, "%d", value);
+        break;
+    case ACE_LOW:
+    case ACE_HIGH:
+        snprintf(sval, 2, "%s", "A");
+        break;
+    case JACK:
+        snprintf(sval, 2, "%s", "J");
+        break;
+    case QUEEN:
+        snprintf(sval, 2, "%s", "Q");
+        break;
+    case KING:
+        snprintf(sval, 2, "%s", "K");
+        break;
+    default:
+        snprintf(sval, 2, "%s", "?");
+        break;
+    }
+
+    switch (suit) {
+    case SPADES:
+        ssuit = "S";
+        break;
+    case HEARTS:
+        ssuit = "H";
+        break;
+    case CLUBS:
+        ssuit = "C";
+        break;
+    case DIAMONDS:
+        ssuit = "D";
+        break;
+    default:
+        ssuit = "?";
+        break;
+    }
+
+    snprintf(name, 4, "%s%s", sval, ssuit);
+    return name;
 }
