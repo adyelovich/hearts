@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <string.h>
+#include <ctype.h>
 
 #include "cards.h"
 
@@ -14,7 +15,10 @@ static char *card_string_abbrev(char *name, Value value, Suit suit);
 static int extract_from_card_name(const char *name, Value *value, Suit *suit);
 static Value string_to_suit(const char *s);
 static Suit string_to_value(const char *s);
-static int prompt_for_card_name(Player *player);
+static int prompt_for_card_name(char *name, Player *player);
+static int valid_card_name_format(const char *value, const char *suit);
+static int player_card_index(Player *player, const Card *card);
+static void str_toupper(char *s);
 
 /**
  * Generates a "standard" deck of cards, where is standard is considered to
@@ -44,7 +48,7 @@ int gensd(Deck *deck, Value start, Value end, int n) {
         for (i = SPADES; i <= DIAMONDS; i++)
             for (j = start; j <= end; j++) {
                 p->value = j;
-                p->suit = i;
+               p->suit = i;
                 p->state = IN_DECK;
                 p->name = malloc(4);
                 card_string_abbrev(p->name, p->value, p->suit);
@@ -84,6 +88,7 @@ int gentable(Player *table, int n, int handsize) {
  * same amount of cards.
  */
 
+/* passing in the separate decksize is not needed I don't think, it comes with deck */
 int dealdeck(Player *players, Deck *deck, int n, int numplayers, int decksize) {
     int i;
 
@@ -129,50 +134,91 @@ int print_hand(Player *player) {
 Card *play_card(Player *player, valid_play_function is_valid) {
     int num, valid = 0;
     Card *played;
-
+    char card_name[CARD_NAME_LENGTH];
+    
     while (!valid) {
         printf("Choose a card to play: ");
         /*scanf("%d", &num);*/
-        prompt_for_card_name(player);
+        valid = prompt_for_card_name(card_name, player);
 
-        printf("we have success\n");
-        return NULL;
-        if ((valid = IN_RANGE(num, player->num_cards))) {
+        /* at this point we are guaranteed to have a card */
+        if (valid) {
+            played = card_with_name(card_name, player->hand, player->num_cards);
             if (is_valid != NULL)
-                valid = is_valid(player, player->hand[num - 1]);
+                valid = is_valid(player, played);
         } else {
             printf("Invalid entry: %d. Must be in range (1 - %d)\n",
                    num, player->num_cards);
         }
     }
 
+    num = player_card_index(player, played);
     player->hand[num - 1]->state = IN_PLAY;
     dec_card_suit(player, player->hand[num]->suit);
     played = remove_from_hand(player, num - 1);
 
     return played;
 }
+
+Card *card_with_name(const char *name, Card **cards, int num_cards) {
+    int i;
+
+    for (i = 0; i < num_cards; i++)
+        if (strcmp(cards[i]->name, name) == 0)
+            return cards[i];
+}
+
 #if 0
 int player_has_card_with_name(Player *player, const char *name) {
     
 }
 #endif
-static int prompt_for_card_name(Player *player) {
-    char name[CARD_NAME_LENGTH], svalue[3], ssuit[2];
+static int prompt_for_card_name(char *name, Player *player) {
+    char buf[CARD_NAME_LENGTH + 1], svalue[3], ssuit[2];
     Value value;
     Suit suit;
     int done = 0;
+    int n;
     
-    while (!done && fgets(name, CARD_NAME_LENGTH, stdin) != NULL) {
-        printf("you entered %s\n", name);
-        if (sscanf(name, " %1[0-9AJKQajkq]0%1[CDHScdhs] ", svalue, ssuit) != 2)
-            printf("Invalid card format! Use the format that matches the cards in your hand\n");
-        else
+    while (!done && fgets(buf, CARD_NAME_LENGTH + 1, stdin) != NULL) {
+        n = sscanf(buf, " %2[0-9AJKQajkq]%1[CDHScdhs] ", svalue, ssuit);
+
+        if (n == 2 && valid_card_name_format(svalue, ssuit)) {
+            str_toupper(svalue);
+            str_toupper(ssuit);
+            if (ssuit[0] == '0')
+                ssuit[0] = ssuit[1];
             done = 1;
+        } else {
+            printf("Invalid card format!\n");
+        }
     }
-        
-    return 0;
+
+    strncpy(name, svalue, 3);
+    strncat(name, ssuit, 2);
+
+    return done;
 }
+
+static int valid_card_name_format(const char *value, const char *suit) {
+    int ret = 1;
+    
+    if (value[0] == '1' && value[1] == '0')
+        ret = 1;
+    else if (value[0] != '1' && isdigit(value[0]) && value[1] == '\0')
+        ret = 1;
+    else
+        ret = 0;
+
+    if (ret) {
+        char temp = toupper(suit[0]);
+        if (temp != 'C' && temp != 'D' && temp != 'H' && temp != 'S')
+            ret = 0;
+    }
+
+    return ret;
+}
+
 #if 0
 static int extract_from_card_name(const char *name, Value *value, Suit *suit) {
     size_t len = strlen(name);
@@ -305,29 +351,31 @@ int dec_card_suit(Player *player, Suit suit) {
     return ret;
 }
 
-/* The issue here is that the searching stops prematurely and thinks
-   that something like a 4C is actually a 2C, so it stops early. Fix this
-   by implementing some sort of check to see if the suit and value match up.*/
-
 Player *find_player_with_card(Player *players, const Card *card, int numplayers) {
     int i, j, found;
 
     /* iterate over all the players */
     found = 0;
-    for (i = 0; i < numplayers && !found; i++) {
-        /* stop once we hit the target suit */
-        for (j = 0; j < players[i].num_cards && players[i].hand[j]->suit < card->suit; j++)
-            ;
+    for (i = 0; i < numplayers && !found; i++)
+        found = player_card_index(&players[i], card) != -1 ? 1 : 0;
 
-        /* stop once we hit the target value */
-        for ( ; j < players[i].num_cards && players[i].hand[j]->value < card->value; j++)
-            ;
-
-        found = card->suit == players[i].hand[j]->suit && card->value == players[i].hand[j]->value;
-    }
-
-    printf("%d\n", found);
     return found ? players + i - 1 : NULL;
+}
+
+static int player_card_index(Player *player, const Card *card) {
+    int i;
+
+    /* stop once we hit the target suit */
+    for (i = 0; i < player->num_cards && player->hand[i]->suit < card->suit; i++)
+        ;
+    
+    /*stop once we hit the target value */
+    for ( ; i < player->num_cards && player->hand[i]->value < card->value; i++)
+        ;
+
+    /* if the card we stopped at matches the target suit and value return the index */
+    return player->hand[i]->suit == card->suit && player->hand[i]->value == card->value
+        ? i : -1;
 }
 
 int num_of_suit(Player *player, Suit suit) {
@@ -411,6 +459,11 @@ static unsigned int deal_card(Player *player, Deck *deck, int decksize) {
     deck->cards[ri].state = IN_HAND;
 
     return ri;
+}
+
+static void str_toupper(char *s) {
+    for ( ; *s; s++)
+        *s = toupper(*s);
 }
 
  

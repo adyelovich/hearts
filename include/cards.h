@@ -139,4 +139,6 @@ int num_of_suit(Player *player, Suit suit);
  */
 Player *find_player_with_card(Player *players, const Card *card, int numplayers);
 
+Card *card_with_name(const char *name, Card **cards, int num_cards);
+
 #endif /* _CARDS_H */
