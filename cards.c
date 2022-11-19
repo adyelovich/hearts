@@ -135,27 +135,27 @@ Card *play_card(Player *player, valid_play_function is_valid) {
     int num, valid = 0;
     Card *played;
     char card_name[CARD_NAME_LENGTH];
-    
-    while (!valid) {
-        printf("Choose a card to play: ");
-        /*scanf("%d", &num);*/
-        valid = prompt_for_card_name(card_name, player);
 
-        /* at this point we are guaranteed to have a card */
+    do {
+        print_hand(player);
+        printf("Choose a card to play: ");
+        valid = prompt_for_card_name(card_name, player);
         if (valid) {
             played = card_with_name(card_name, player->hand, player->num_cards);
-            if (is_valid != NULL)
-                valid = is_valid(player, played);
-        } else {
-            printf("Invalid entry: %d. Must be in range (1 - %d)\n",
-                   num, player->num_cards);
+            if (played == NULL) {
+                printf("Invalid entry: play a card in your hand\n");
+                valid = 0;
+            } else {
+                if (is_valid != NULL)
+                    valid = is_valid(player, played);
+            }
         }
-    }
+    } while (!valid);
 
     num = player_card_index(player, played);
-    player->hand[num - 1]->state = IN_PLAY;
+    player->hand[num]->state = IN_PLAY;
     dec_card_suit(player, player->hand[num]->suit);
-    played = remove_from_hand(player, num - 1);
+    played = remove_from_hand(player, num);
 
     return played;
 }
@@ -166,13 +166,10 @@ Card *card_with_name(const char *name, Card **cards, int num_cards) {
     for (i = 0; i < num_cards; i++)
         if (strcmp(cards[i]->name, name) == 0)
             return cards[i];
+
+    return NULL;
 }
 
-#if 0
-int player_has_card_with_name(Player *player, const char *name) {
-    
-}
-#endif
 static int prompt_for_card_name(char *name, Player *player) {
     char buf[CARD_NAME_LENGTH + 1], svalue[3], ssuit[2];
     Value value;
@@ -201,107 +198,27 @@ static int prompt_for_card_name(char *name, Player *player) {
 }
 
 static int valid_card_name_format(const char *value, const char *suit) {
-    int ret = 1;
+    int ret = 0;
+
     
     if (value[0] == '1' && value[1] == '0')
         ret = 1;
     else if (value[0] != '1' && isdigit(value[0]) && value[1] == '\0')
         ret = 1;
-    else
-        ret = 0;
-
+    else {
+        char temp = toupper(value[0]);
+        if (temp == 'A' || temp == 'J' || temp == 'K' || temp == 'Q')
+            ret = 1;
+    }
+    
     if (ret) {
         char temp = toupper(suit[0]);
         if (temp != 'C' && temp != 'D' && temp != 'H' && temp != 'S')
-            ret = 0;
+            ret = 0; /* turn off valid flag here */
     }
 
     return ret;
 }
-
-#if 0
-static int extract_from_card_name(const char *name, Value *value, Suit *suit) {
-    size_t len = strlen(name);
-    
-    *value = string_to_value(name);
-    *suit = string_to_suit(name + len - 1);
-}
-
-static Suit string_to_suit(const char *s) {
-    Suit suit;
-
-    switch (s[0]) {
-    case 'S':
-        suit = SPADES;
-        break;
-    case 'H':
-        suit = HEARTS;
-        break;
-    case 'C':
-        suit = CLUBS;
-        break;
-    case 'D':
-        suit = DIAMONDS;
-        break;
-    default:
-        suit = NONE_SUIT;
-        break;
-    }
-
-    return suit;
-}
-
-static Value string_to_value(const char *s) {
-    Value v;
-
-    switch (s[0]) {
-    case '2':
-        v = TWO;
-        break;
-    case '3':
-        v = THREE;
-        break;
-    case '4':
-        v = FOUR;
-        break;
-    case '5':
-        v = FIVE;
-        break;
-    case '6':
-        v = SIX;
-        break;
-    case '7':
-        v = SEVEN;
-        break;
-    case '8':
-        v = EIGHT;
-        break;
-    case '9':
-        v = NINE;
-        break;
-    case '1':
-        v = TEN;
-        break;
-    case 'J':
-        v = JACK;
-        break;
-    case 'Q':
-        v = QUEEN;
-        break;
-    case 'K':
-        v = KING;
-        break;
-    case 'A':
-        v = ACE_HIGH; /*TODO make this more versatile*/
-        break;
-    default:
-        v = NONE_VALUE;
-        break;
-    }
-
-    return v;
-}
-#endif
 
 int inc_card_suit(Player *player, Suit suit) {
     int ret;

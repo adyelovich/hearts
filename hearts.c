@@ -19,6 +19,9 @@
                             "have been broken."
 
 static int hearts_valid_play(Player *player, Card *card);
+static int first_round_valid_play(Player *player, Card *card);
+static int lead_valid_play(Player *player, Card *card);
+static int follow_suit_valid_play(Player *player, Card *card);
 static void print_err(void);
 static int compare_values(Card *first, Card *second);
 
@@ -89,16 +92,12 @@ int play_round(Player *players, Deck *deck) {
     dealdeck(players, deck, NUM_START_IN_HAND, NUM_PLAYERS, NUM_CARDS_IN_DECK);
     
     /*Play a trick*/
-    game.round_num++;
     
     player_start_num = find_player_with_card(players, game.two_clubs, 4)->num;
-    #if 0
-    printf("Can I lead? %s\n", game.is_lead ? "yes" : "no");
-    printf("%d\n", play_trick(players, player_start_num));
-    #endif
     while (rounds_left--) {
         game.led_suit = NONE_SUIT;
         game.is_lead = 1;
+        game.round_num++;
         player_start_num = play_trick(players, player_start_num);
     }
     return 0;
@@ -113,7 +112,7 @@ int play_trick(Player *players, int startno) {
     for (i = 0; i < NUM_PLAYERS; i++) {
         int table_index = (i + startno) % NUM_PLAYERS;
             
-        print_hand(&players[table_index]);
+        /*print_hand(&players[table_index]);*/
         trick[table_index] = play_card(&players[table_index], hearts_valid_play);
         
         if (!i) {
@@ -165,55 +164,71 @@ static int compare_values(Card *first, Card *second) {
         return -1;
 }
 
-    
 static int hearts_valid_play(Player *player, Card *card) {
-    int valid;
+    int valid = 0;
 
-    valid = 1;
-
-    if (game.is_lead) {
-        printf("it is the player's lead\n");
-        if (game.first_trick) {
-            printf("it is the first trick\n");
-            if (card->value != TWO || card->suit != CLUBS) {
-                printf("player tried to play a non-2C on first trick\n");
-                game.error = ERR_2C_FIRST_TRICK;
-                valid = 0;
-            } else
-                printf("successfully chose 2C\n");
-        } else if (card->suit == HEARTS && !game.hearts_broken && player->num_hearts) {
-            printf("tried to play hearts when they weren\'t broken\n");
-            game.error = ERR_HEARTS_BRKN;
-            valid = 0;
-        } else
-            printf("successfully played a legal card\n");
-    } else if (card->suit != game.led_suit) {
-        printf("it is not the player's lead\n");
-        printf("player tried to play a suit that does not match led suit\n");
-        printf("%d\n", num_of_suit(player, game.led_suit));
-        if (num_of_suit(player, game.led_suit)) {
-            printf("player has cards they could play\n");
-            game.error = ERR_FOLLOW_SUIT;
-            valid = 0;
-        } else if (game.first_trick) {
-            printf("player has no cards in led suit\n");
-            printf("it is the first trick\n");
-            if (card->suit == HEARTS) {
-                printf("player tried to play a heart on first trick\n");
-                game.error = ERR_HEARTS_FIRST_TRICK;
-                valid = 0;
-            } else if (card->value == QUEEN && card->suit == SPADES) {
-                printf("player tried to play a QS on first trick");
-                game.error = ERR_QUEEN_FIRST_TRICK;
-                valid = 0;
-            }
-        }
-        
-    }
+    if (game.round_num == 1)
+        valid = first_round_valid_play(player, card);
+    else if (game.is_lead)
+        valid = lead_valid_play(player, card);
+    else
+        valid = follow_suit_valid_play(player, card);
 
     if (!valid)
         print_err();
+
+    return valid;
+}
+
+static int first_round_valid_play(Player *player, Card *card) {
+    int valid = 0;
+    printf("it is the first round\n");
+
+    if (game.is_lead) {
+        if (card != game.two_clubs) {
+            printf("player tried to play something other than 2C on lead\n");
+            game.error = ERR_2C_FIRST_TRICK;
+        } else
+            valid = 1;
+    } else if (card->suit == HEARTS) {
+        printf("player tried to play hearts on first trick\n");
+        game.error = ERR_HEARTS_FIRST_TRICK;
+    } else if (card == game.queen_spades) {
+        printf("player tried to play QS on first trick\n");
+        game.error = ERR_QUEEN_FIRST_TRICK;
+    } else
+        valid = follow_suit_valid_play(player, card);
+
+    return valid;
+}
+
+static int lead_valid_play(Player *player, Card *card) {
+    int valid = 0;
+    printf("it is the lead\n");
     
+    if (!game.hearts_broken && card->suit == HEARTS
+        && player->num_cards != player->num_hearts) {
+        printf("player tried to play a heart when they were not broken\n");
+        game.error = ERR_HEARTS_BRKN;
+    }
+    else
+        valid = 1;
+
+    return valid;
+}
+
+static int follow_suit_valid_play(Player *player, Card *card) {
+    int valid = 0;
+    printf("checking out a regular play\n");
+
+    /* if player has zero cards in led suit then they can play
+       whatever they want */
+    if (card->suit != game.led_suit && num_of_suit(player, game.led_suit)) {
+        printf("player has cards they could have played\n");
+        game.error = ERR_FOLLOW_SUIT;
+    } else
+        valid = 1;
+
     return valid;
 }
 
