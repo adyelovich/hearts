@@ -149,7 +149,10 @@ Card *play_card(Player *player, valid_play_function is_valid) {
                 if (is_valid != NULL)
                     valid = is_valid(player, played);
             }
+        } else {
+            printf("Invalid card format!\n");
         }
+        
     } while (!valid);
 
     num = player_card_index(player, played);
@@ -176,23 +179,25 @@ static int prompt_for_card_name(char *name, Player *player) {
     Suit suit;
     int done = 0;
     int n;
-    
-    while (!done && fgets(buf, CARD_NAME_LENGTH + 1, stdin) != NULL) {
-        n = sscanf(buf, " %2[0-9AJKQajkq]%1[CDHScdhs] ", svalue, ssuit);
 
-        if (n == 2 && valid_card_name_format(svalue, ssuit)) {
+    if (fgets(buf, CARD_NAME_LENGTH + 1, stdin) != NULL) {
+        n = sscanf(buf, " %2[0-9AJKQajkq]%1[CDHScdhs] ", svalue, ssuit);
+        done = n == 2 && valid_card_name_format(svalue, ssuit);
+        if (done) {
             str_toupper(svalue);
             str_toupper(ssuit);
             if (ssuit[0] == '0')
                 ssuit[0] = ssuit[1];
-            done = 1;
-        } else {
-            printf("Invalid card format!\n");
+            
+            strncpy(name, svalue, 3);
+            strncat(name, ssuit, 2);
+        } 
+    } else {
+        if (feof(stdin)) {
+            puts("");
+            exit(0);
         }
     }
-
-    strncpy(name, svalue, 3);
-    strncat(name, ssuit, 2);
 
     return done;
 }
