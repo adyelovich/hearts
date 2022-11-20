@@ -33,6 +33,7 @@ static struct {
     Suit led_suit;
     const Card *two_clubs;
     const Card *queen_spades;
+    int end_score;
     Hearts_Error error;
 } game;
 
@@ -44,6 +45,7 @@ int main(void) {
 int start_hearts(void) {
     Deck *deck;
     Player *players;
+    int i, win = 0;
     
     deck = malloc(NUM_CARDS_IN_DECK * sizeof(Card));
     players = malloc(NUM_PLAYERS * sizeof(Player));
@@ -62,13 +64,25 @@ int start_hearts(void) {
 
     gentable(players, NUM_PLAYERS, NUM_START_IN_HAND);
 
+    game.end_score = 100; /*note this can be user-defined*/
     game.first_trick = 0;
     game.hearts_broken = 0;
     game.is_lead = 0;
     game.error = ERR_NONE;
 
-    play_round(players, deck);
-        
+    do {
+        play_round(players, deck);
+        printf("Scores:\n");
+        for (i = 0; i < NUM_PLAYERS; i++)
+            printf("Player %d: %d\n", i, players[i].score);
+    } while (!stop_game(players, game.end_score));
+
+    for (i = 1; i < NUM_PLAYERS; i++)
+        if (players[i].score < players[win].score)
+            win = i;
+
+    printf("\nPlayer %d won the game!!!!\n", win);
+    
     return 1;
 }
 
@@ -142,6 +156,17 @@ int play_trick(Player *players, int startno) {
 
     printf("player %d won the last trick!\n", winning_index);
     return winning_index;
+}
+
+int stop_game(Player *players, const int end) {
+    int i;
+    int stop = 0;
+    
+    for (i = 0; !stop && i < NUM_PLAYERS; i++)
+        if (players[i].score >= end)
+            stop = 1;
+
+    return stop;
 }
 
 int compare_cards(Card *first, Card *second) {

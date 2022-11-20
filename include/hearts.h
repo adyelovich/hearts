@@ -27,5 +27,6 @@ int start_hearts(void);
 int play_round(Player *players, Deck *deck);
 int play_trick(Player *players, int startno);
 int compare_cards(Card *first, Card *second);
+int stop_game(Player *players, const int end);
 
 #endif /* _HEARTS_H */
